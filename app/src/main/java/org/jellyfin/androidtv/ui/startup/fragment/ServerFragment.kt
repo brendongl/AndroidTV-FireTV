@@ -65,7 +65,7 @@ class ServerFragment : Fragment() {
 		val server = serverIdArgument?.let(startupViewModel::getServer)
 
 		if (server == null) {
-			navigateFragment<SelectServerFragment>(keepToolbar = true, keepHistory = false)
+			navigateFragment<SipflixServerPickerFragment>(keepToolbar = true, keepHistory = false)
 			return null
 		}
 
@@ -215,7 +215,7 @@ class ServerFragment : Fragment() {
 		}
 
 		binding.serverButton.setOnClickListener {
-			navigateFragment<SelectServerFragment>(keepToolbar = true)
+			navigateFragment<SipflixServerPickerFragment>(keepToolbar = true)
 		}
 
 		if (!server.versionSupported) {
@@ -260,7 +260,7 @@ class ServerFragment : Fragment() {
 
 		val server = serverIdArgument?.let(startupViewModel::getServer)
 		if (server != null) startupViewModel.loadUsers(server)
-		else navigateFragment<SelectServerFragment>(keepToolbar = true)
+		else navigateFragment<SipflixServerPickerFragment>(keepToolbar = true)
 	}
 
 	private class UserAdapter(

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
@@ -50,13 +53,11 @@ import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.startup.StartupViewModel
 import org.koin.androidx.viewmodel.ext.android.activityViewModel
 
-data class SipflixServer(val name: String, val label: String, val url: String)
+data class SipflixServer(val name: String, val cdnUrl: String, val directUrl: String)
 
 private val SIPFLIX_SERVERS = listOf(
-    SipflixServer("iDuck", "CDN", "https://34335.brr.savethecdn.com/"),
-    SipflixServer("iDuck", "Direct", "http://95.216.4.149:42418/"),
-    SipflixServer("Alpha", "CDN", "https://emby.alphacdn.sipflix.net/"),
-    SipflixServer("Alpha", "Direct", "https://emby.alpha.sipflix.net/"),
+    SipflixServer("iDuck", "https://34335.brr.savethecdn.com/", "http://95.216.4.149:42418/"),
+    SipflixServer("Alpha", "https://emby.alphacdn.sipflix.net/", "https://emby.alpha.sipflix.net/"),
 )
 
 class SipflixServerPickerFragment : Fragment() {
@@ -84,14 +85,17 @@ class SipflixServerPickerFragment : Fragment() {
         connectingState.value = true
         selectedServer.value = server
 
-        startupViewModel.addServer(server.url).onEach { state ->
+        startupViewModel.addServer(server.cdnUrl).onEach { state ->
             when (state) {
                 is ConnectedState -> {
                     parentFragmentManager.commit {
-                        replace<ServerFragment>(
+                        replace<UserLoginFragment>(
                             R.id.content_view,
                             null,
-                            bundleOf(ServerFragment.ARG_SERVER_ID to state.id.toString())
+                            bundleOf(
+                                UserLoginFragment.ARG_SERVER_ID to state.id.toString(),
+                                UserLoginFragment.ARG_SKIP_QUICKCONNECT to true,
+                            )
                         )
                         replace<StartupToolbarFragment>(R.id.toolbar_view)
                         addToBackStack(null)
@@ -103,7 +107,7 @@ class SipflixServerPickerFragment : Fragment() {
                     selectedServer.value = null
                     Toast.makeText(
                         requireContext(),
-                        "Could not connect to ${server.name} (${server.label}). Try another server.",
+                        "Could not connect to ${server.name}. Try another server.",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -122,6 +126,12 @@ private fun SipflixServerPickerScreen(
     selected: SipflixServer?,
     onServerSelected: (SipflixServer) -> Unit,
 ) {
+    val firstButtonFocus = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        firstButtonFocus.requestFocus()
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -151,12 +161,13 @@ private fun SipflixServerPickerScreen(
             Spacer(modifier = Modifier.height(40.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SIPFLIX_SERVERS.forEach { server ->
+                SIPFLIX_SERVERS.forEachIndexed { index, server ->
                     ServerButton(
                         server = server,
                         isConnecting = connecting && selected == server,
                         enabled = !connecting,
                         onClick = { onServerSelected(server) },
+                        focusRequester = if (index == 0) firstButtonFocus else null,
                     )
                 }
             }
@@ -178,6 +189,7 @@ private fun ServerButton(
     isConnecting: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
+    focusRequester: FocusRequester? = null,
 ) {
     var isFocused by remember { mutableStateOf(false) }
 
@@ -191,9 +203,15 @@ private fun ServerButton(
         else -> Color.White.copy(alpha = 0.12f)
     }
 
+    val focusModifier = if (focusRequester != null) {
+        Modifier.focusRequester(focusRequester)
+    } else {
+        Modifier
+    }
+
     Box(
-        modifier = Modifier
-            .width(160.dp)
+        modifier = focusModifier
+            .width(200.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(bgColor)
             .border(1.5.dp, borderColor, RoundedCornerShape(12.dp))
@@ -206,16 +224,9 @@ private fun ServerButton(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = server.name,
-                fontSize = 18.sp,
+                fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = server.label,
-                fontSize = 13.sp,
-                color = Color(0xFF4ECDC4),
                 textAlign = TextAlign.Center,
             )
             if (isConnecting) {

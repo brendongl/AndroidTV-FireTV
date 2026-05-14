@@ -10,17 +10,24 @@ import android.view.ViewGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,10 +35,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,13 +91,17 @@ class SipflixQrLoginFragment : Fragment() {
                 loginUrl = loginUrl.value,
                 statusMessage = statusMessage.value,
                 isAuthenticating = isAuthenticating.value,
+                onManualLogin = { username, password ->
+                    isAuthenticating.value = true
+                    statusMessage.value = "Signing in…"
+                    userLoginViewModel.login(username, password)
+                },
             )
         }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         startLoginServer()
         observeLoginState()
     }
@@ -127,7 +147,6 @@ class SipflixQrLoginFragment : Fragment() {
                     statusMessage.value = "Signing in…"
                 }
                 is AuthenticatedState -> {
-                    // Activity observes and opens MainActivity automatically
                     isAuthenticating.value = false
                     statusMessage.value = null
                 }
@@ -183,89 +202,223 @@ private fun SipflixQrLoginScreen(
     loginUrl: String?,
     statusMessage: String?,
     isAuthenticating: Boolean,
+    onManualLogin: (String, String) -> Unit,
 ) {
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    val passwordFocus = remember { FocusRequester() }
+    val submitFocus = remember { FocusRequester() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF0F0F1A)),
+            .background(Color(0xFF0F0F1A))
+            .padding(horizontal = 32.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp),
-        ) {
-            Text(
-                text = "Scan to Sign In",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = "Open the QR code with your phone",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.5f),
-                textAlign = TextAlign.Center,
-            )
-
-            Spacer(modifier = Modifier.height(28.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(220.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color.White)
-                    .border(3.dp, Color(0xFFFF6B6B), RoundedCornerShape(16.dp)),
-                contentAlignment = Alignment.Center,
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(32.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
             ) {
-                if (qrBitmap != null) {
-                    Image(
-                        bitmap = qrBitmap.asImageBitmap(),
-                        contentDescription = "Login QR code",
+                // Left: QR code
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Box(
                         modifier = Modifier
-                            .size(200.dp)
-                            .padding(8.dp),
-                    )
-                } else if (statusMessage == null) {
+                            .size(180.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .border(2.dp, Color(0xFFFF6B6B), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (qrBitmap != null) {
+                            Image(
+                                bitmap = qrBitmap.asImageBitmap(),
+                                contentDescription = "Login QR code",
+                                modifier = Modifier
+                                    .size(160.dp)
+                                    .padding(4.dp),
+                            )
+                        } else if (statusMessage == null) {
+                            Text(
+                                text = "Generating…",
+                                color = Color.Gray,
+                                fontSize = 12.sp,
+                            )
+                        }
+                    }
+
+                    if (loginUrl != null && !isAuthenticating) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = loginUrl,
+                            fontSize = 11.sp,
+                            color = Color(0xFF4ECDC4),
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+
+                // Vertical divider
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(180.dp)
+                        .background(Color.White.copy(alpha = 0.1f))
+                )
+
+                // Right: Manual login
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     Text(
-                        text = "Generating…",
-                        color = Color.Gray,
-                        fontSize = 13.sp,
+                        text = "Sign in manually",
+                        fontSize = 14.sp,
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Medium,
+                    )
+
+                    LoginInputField(
+                        value = username,
+                        onValueChange = { username = it },
+                        placeholder = "Username",
+                        enabled = !isAuthenticating,
+                        imeAction = ImeAction.Next,
+                        onNext = { passwordFocus.requestFocus() },
+                    )
+
+                    LoginInputField(
+                        value = password,
+                        onValueChange = { password = it },
+                        placeholder = "Password",
+                        isPassword = true,
+                        enabled = !isAuthenticating,
+                        focusRequester = passwordFocus,
+                        imeAction = ImeAction.Done,
+                        onDone = { if (username.isNotBlank()) onManualLogin(username, password) },
+                    )
+
+                    LoginSubmitButton(
+                        enabled = !isAuthenticating && username.isNotBlank(),
+                        focusRequester = submitFocus,
+                        label = if (isAuthenticating) "Signing in…" else "Sign In",
+                        onClick = { onManualLogin(username, password) },
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            if (loginUrl != null && !isAuthenticating) {
-                Text(
-                    text = loginUrl,
-                    fontSize = 13.sp,
-                    color = Color(0xFF4ECDC4),
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Or open this URL on your phone",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.35f),
-                    textAlign = TextAlign.Center,
-                )
-            }
-
             if (statusMessage != null) {
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = statusMessage,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     color = if (isAuthenticating) Color(0xFF4ECDC4) else Color(0xFFFF6B6B),
                     textAlign = TextAlign.Center,
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun LoginInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    enabled: Boolean,
+    isPassword: Boolean = false,
+    focusRequester: FocusRequester? = null,
+    imeAction: ImeAction = ImeAction.Next,
+    onNext: (() -> Unit)? = null,
+    onDone: (() -> Unit)? = null,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+    val borderColor = if (isFocused) Color(0xFFFF6B6B) else Color.White.copy(alpha = 0.15f)
+
+    var fieldModifier = Modifier
+        .fillMaxWidth()
+        .onFocusChanged { isFocused = it.isFocused }
+
+    if (focusRequester != null) {
+        fieldModifier = fieldModifier.focusRequester(focusRequester)
+    }
+
+    BasicTextField(
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
+        modifier = fieldModifier,
+        singleLine = true,
+        textStyle = TextStyle(color = Color.White, fontSize = 15.sp),
+        cursorBrush = SolidColor(Color(0xFFFF6B6B)),
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (isPassword) KeyboardType.Password else KeyboardType.Text,
+            imeAction = imeAction,
+        ),
+        keyboardActions = KeyboardActions(
+            onNext = { onNext?.invoke() },
+            onDone = { onDone?.invoke() },
+        ),
+        decorationBox = { innerTextField ->
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1A1A2E))
+                    .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+            ) {
+                if (value.isEmpty()) {
+                    Text(
+                        text = placeholder,
+                        fontSize = 15.sp,
+                        color = Color.White.copy(alpha = 0.3f),
+                    )
+                }
+                innerTextField()
+            }
+        },
+    )
+}
+
+@Composable
+private fun LoginSubmitButton(
+    enabled: Boolean,
+    focusRequester: FocusRequester,
+    label: String,
+    onClick: () -> Unit,
+) {
+    var isFocused by remember { mutableStateOf(false) }
+
+    val bgColor = when {
+        !enabled -> Color(0xFFFF6B6B).copy(alpha = 0.3f)
+        isFocused -> Color(0xFFFF6B6B)
+        else -> Color(0xFFFF6B6B).copy(alpha = 0.8f)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .onFocusChanged { isFocused = it.isFocused }
+            .focusRequester(focusRequester)
+            .focusable(enabled)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(vertical = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            textAlign = TextAlign.Center,
+        )
     }
 }
