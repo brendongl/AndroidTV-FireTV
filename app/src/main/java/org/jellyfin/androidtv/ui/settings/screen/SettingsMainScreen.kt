@@ -56,7 +56,6 @@ import org.jellyfin.androidtv.ui.base.form.Checkbox
 import org.jellyfin.androidtv.ui.base.list.ListButton
 import org.jellyfin.androidtv.ui.base.list.ListSection
 import org.jellyfin.androidtv.ui.navigation.LocalRouter
-import org.jellyfin.androidtv.ui.preference.category.DonateDialog
 import org.jellyfin.androidtv.ui.preference.category.GlassDialogButton
 import org.jellyfin.androidtv.ui.settings.Routes
 import org.jellyfin.androidtv.ui.settings.compat.rememberPreference
@@ -78,7 +77,6 @@ fun SettingsMainScreen() {
 	val currentServer by serverRepository.currentServer.collectAsState()
 	val syncPlaySupported = currentServer.supportsFeature(ServerFeature.SYNC_PLAY)
 
-	var showDonateDialog by remember { mutableStateOf(false) }
 	var updateInfoForDialog by remember { mutableStateOf<UpdateCheckerService.UpdateInfo?>(null) }
 	var showReleaseNotes by remember { mutableStateOf(false) }
 
@@ -196,33 +194,11 @@ fun SettingsMainScreen() {
 
 		item {
 			ListButton(
-				leadingContent = {
-					Icon(
-						painterResource(R.drawable.ic_heart),
-						contentDescription = null,
-						tint = Color.Red
-					)
-				},
-				headingContent = { Text("Support Moonfin") },
-				captionContent = { Text("Help us continue development") },
-				onClick = {
-					showDonateDialog = true
-				}
-			)
-		}
-
-		item {
-			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_jellyfin), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.pref_about_title)) },
 				onClick = { router.push(Routes.ABOUT) }
 			)
 		}
-	}
-
-	// Dialogs
-	if (showDonateDialog) {
-		DonateDialog(onDismiss = { showDonateDialog = false })
 	}
 
 	val currentUpdateInfo = updateInfoForDialog

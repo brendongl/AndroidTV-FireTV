@@ -37,6 +37,7 @@ import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.ui.startup.fragment.SelectServerFragment
 import org.jellyfin.androidtv.ui.startup.fragment.ServerFragment
+import org.jellyfin.androidtv.ui.startup.fragment.SipflixServerPickerFragment
 import org.jellyfin.androidtv.ui.startup.fragment.SplashFragment
 import org.jellyfin.androidtv.ui.startup.fragment.StartupToolbarFragment
 import org.jellyfin.androidtv.util.applyTheme
@@ -191,7 +192,7 @@ class StartupActivity : FragmentActivity() {
 	}
 
 	private fun showServerSelection() = supportFragmentManager.commit {
-		replace<SelectServerFragment>(R.id.content_view)
+		replace<SipflixServerPickerFragment>(R.id.content_view)
 		replace<StartupToolbarFragment>(R.id.toolbar_view)
 	}
 

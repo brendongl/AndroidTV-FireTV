@@ -42,9 +42,11 @@ kotlinx-serialization = "1.10.0"
 ktor = "3.0.3"
 markwon = "4.6.2"
 mockk = "1.14.9"
+nanohttpd = "2.3.1"
 pipeextractor = "v0.26.0"
 slf4j-timber = "0.0.4"
 timber = "5.0.1"
+zxing-core = "3.5.3"
 
 [plugins]
 aboutlibraries = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutlibraries" }
@@ -57,6 +59,12 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 [libraries]
 # Emby
 emby-client = { module = "org.emby:emby-client", version.ref = "emby-client" }
+
+# NanoHTTPD
+nanohttpd = { module = "org.nanohttpd:nanohttpd", version.ref = "nanohttpd" }
+
+# ZXing
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing-core" }
 
 # Jellyfin
 jellyfin-sdk = { module = "org.jellyfin.sdk:jellyfin-core", version.ref = "jellyfin-sdk" }

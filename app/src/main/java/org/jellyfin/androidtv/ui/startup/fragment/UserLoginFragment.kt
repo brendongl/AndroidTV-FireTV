@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
-import org.jellyfin.androidtv.auth.model.UnavailableQuickConnectState
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.databinding.FragmentUserLoginBinding
 import org.jellyfin.androidtv.ui.startup.UserLoginViewModel
@@ -56,8 +55,8 @@ class UserLoginFragment : Fragment() {
 		_binding = FragmentUserLoginBinding.inflate(inflater, container, false)
 
 		binding.backButton.setOnClickListener { parentFragmentManager.popBackStack() }
-		binding.useCredentials.setOnClickListener { setLoginMethod<UserLoginCredentialsFragment>() }
-		binding.useQuickconnect.setOnClickListener { setLoginMethod<UserLoginQuickConnectFragment>() }
+		binding.useCredentials.isVisible = false
+		binding.useQuickconnect.isVisible = false
 
 		return binding.root
 	}
@@ -67,16 +66,11 @@ class UserLoginFragment : Fragment() {
 
 		userLoginViewModel.clearLoginState()
 
-		// Open initial fragment
-		when {
-			skipQuickConnect -> setLoginMethod<UserLoginCredentialsFragment>()
-			!userLoginViewModel.isQuickConnectSupported.value -> setLoginMethod<UserLoginCredentialsFragment>()
-			else -> setLoginMethod<UserLoginQuickConnectFragment>()
-		}
+		// Always use QR login for Sipflix
+		setLoginMethod<SipflixQrLoginFragment>()
 
 		lifecycleScope.launch {
 			viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-				// Update "connecting to ..." text and background
 				userLoginViewModel.server.onEach { server ->
 					val name = server?.name ?: getString(R.string.app_name)
 					binding.subtitle.text = getString(R.string.login_connect_to, name)
@@ -84,17 +78,7 @@ class UserLoginFragment : Fragment() {
 					if (server != null) backgroundService.setBackground(server)
 					else backgroundService.clearBackgrounds()
 				}.launchIn(this)
-
-				// Disable QuickConnect when unavailable
-				userLoginViewModel.quickConnectState.onEach { state ->
-					binding.useQuickconnect.isEnabled = state != UnavailableQuickConnectState
-					if (state == UnavailableQuickConnectState) setLoginMethod<UserLoginCredentialsFragment>()
-				}.launchIn(this)
-					// Hide QuickConnect for non-Jellyfin servers
-					userLoginViewModel.isQuickConnectSupported.onEach { supported ->
-						binding.useQuickconnect.isVisible = supported
-						if (!supported) setLoginMethod<UserLoginCredentialsFragment>()
-					}.launchIn(this)			}
+			}
 		}
 	}
 
@@ -112,9 +96,5 @@ class UserLoginFragment : Fragment() {
 			setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
 			replace<T>(binding.loginMethod.id, TAG_LOGIN_METHOD)
 		}
-
-		// Hide button for active fragment
-		binding.useCredentials.isVisible = T::class != UserLoginCredentialsFragment::class
-		binding.useQuickconnect.isVisible = T::class != UserLoginQuickConnectFragment::class
 	}
 }

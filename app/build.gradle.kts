@@ -20,7 +20,7 @@ android {
 		targetSdk = libs.versions.android.targetSdk.get().toInt()
 
 		// Release version - custom applicationId to avoid conflict with official Jellyfin
-		applicationId = "org.moonfin.androidtv"
+		applicationId = "com.sipflix.androidtv"
 		versionName = project.getVersionName()
 		versionCode = getVersionCode(versionName!!)
 	}
@@ -84,7 +84,7 @@ android {
 			resValue("string", "app_search_suggest_intent_data", "content://${defaultConfig.applicationId}.content/intent")
 
 			// Set flavored application name
-			resValue("string", "app_name", "Moonfin")
+			resValue("string", "app_name", "Sipflix")
 
 			buildConfigField("boolean", "DEVELOPMENT", "false")
 		}
@@ -95,7 +95,7 @@ android {
 			isMinifyEnabled = true
 			isShrinkResources = true
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-			
+
 			// Set package names used in various XML files (must match applicationId for provider authorities)
 			val debugAppId = defaultConfig.applicationId + applicationIdSuffix
 			resValue("string", "app_id", debugAppId)
@@ -103,7 +103,7 @@ android {
 			resValue("string", "app_search_suggest_intent_data", "content://${debugAppId}.content/intent")
 
 			// Set flavored application name
-			resValue("string", "app_name", "Moonfin Debug")
+			resValue("string", "app_name", "Sipflix Debug")
 
 			buildConfigField("boolean", "DEVELOPMENT", (defaultConfig.versionCode!! < 100).toString())
 		}
@@ -121,7 +121,7 @@ android {
 	}
 }
 
-base.archivesName.set("moonfin-androidtv-v${project.getVersionName()}")
+base.archivesName.set("sipflix-androidtv-v${project.getVersionName()}")
 
 tasks.register("versionTxt") {
 	val path = layout.buildDirectory.asFile.get().resolve("version.txt")
@@ -250,6 +250,12 @@ dependencies {
 	runtimeOnly(files(stripPipeExtractorUtils))
 	implementation(libs.pipeextractor.nanojson)
 	implementation(libs.pipeextractor.jsoup)
+
+	// QR code generation
+	implementation(libs.zxing.core)
+
+	// Embedded HTTP server for QR login
+	implementation(libs.nanohttpd)
 
 	// Logging
 	implementation(libs.timber)
