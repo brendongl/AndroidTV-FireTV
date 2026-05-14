@@ -252,8 +252,15 @@ private fun SipflixQrLoginScreen(
                         }
                     }
 
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Scan with your phone to sign in",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.5f),
+                        textAlign = TextAlign.Center,
+                    )
                     if (loginUrl != null && !isAuthenticating) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = loginUrl,
                             fontSize = 11.sp,
@@ -277,10 +284,9 @@ private fun SipflixQrLoginScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "Sign in manually",
-                        fontSize = 14.sp,
+                        text = "Or use remote to sign in manually",
+                        fontSize = 12.sp,
                         color = Color.White.copy(alpha = 0.5f),
-                        fontWeight = FontWeight.Medium,
                     )
 
                     LoginInputField(
